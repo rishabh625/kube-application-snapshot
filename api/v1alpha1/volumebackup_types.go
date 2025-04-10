@@ -27,15 +27,44 @@ import (
 type VolumeBackupSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	// The name of the VolumeBackup object, or directly the VolumeSnapshot object,
+	// to restore from. Using VolumeSnapshot name is more direct.
+	//+kubebuilder:validation:Required
 
-	// Foo is an example field of VolumeBackup. Edit volumebackup_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	SnapshotName string `json:"snapshotName"` // Assumes snapshot exists in the same namespace as the Restore request
+	// The name of the PersistentVolumeClaim to backup.
+	//+kubebuilder:validation:Required
+
+	PvcName string `json:"pvcName"`
+
+	// The namespace where the PVC to backup resides.
+	//+kubebuilder:validation:Required
+	PvcNamespace string `json:"pvcNamespace"`
+
+	// The name of the VolumeSnapshotClass to use for the backup.
+	//+kubebuilder:validation:Required
+	VolumeSnapshotClassName string `json:"volumeSnapshotClassName"`
 }
 
 // VolumeBackupStatus defines the observed state of VolumeBackup.
 type VolumeBackupStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	// Represents the current phase of the backup operation.
+	// +optional
+	Status string `json:"status,omitempty"` // e.g., Pending, CreatingSnapshot, Completed, Failed
+
+	// A human-readable message indicating details about the last transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// The name of the VolumeSnapshot object created by this backup.
+	// +optional
+	SnapshotHandle string `json:"snapshotHandle,omitempty"`
+
+	// The time the backup operation was completed.
+	// +optional
+	CompletionTime *metav1.Time `json:"completionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true

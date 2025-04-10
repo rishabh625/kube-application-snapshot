@@ -1,0 +1,91 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.2
+  name: volumerestores.backup.infracloud-citadel-vbakup.com
+spec:
+  group: backup.infracloud-citadel-vbakup.com
+  names:
+    kind: VolumeRestore
+    listKind: VolumeRestoreList
+    plural: volumerestores
+    singular: volumerestore
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: VolumeRestore is the Schema for the volumerestores API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VolumeRestoreSpec defines the desired state of VolumeRestore.
+            properties:
+              sourceSnapshotName:
+                description: |-
+                  The name of the VolumeBackup object, or directly the VolumeSnapshot object,
+                  to restore from. Using VolumeSnapshot name is more direct.
+                type: string
+              sourceSnapshotNamespace:
+                description: The namespace where the source VolumeSnapshot resides.
+                type: string
+              targetPvcName:
+                description: The name of the target PersistentVolumeClaim to be created
+                  from the snapshot.
+                type: string
+              targetPvcNamespace:
+                description: The namespace where the target PVC should be created.
+                  Defaults to the VolumeRestore's namespace.
+                type: string
+              targetStorageClassName:
+                description: |-
+                  Optional: Specify the StorageClassName for the restored PVC.
+                  If not specified, it might default based on the VolumeSnapshotClass or cluster defaults.
+                type: string
+            required:
+            - sourceSnapshotName
+            - sourceSnapshotNamespace
+            - targetPvcName
+            type: object
+          status:
+            description: VolumeRestoreStatus defines the observed state of VolumeRestore.
+            properties:
+              completionTime:
+                description: The time the restore operation was completed.
+                format: date-time
+                type: string
+              message:
+                description: A human-readable message indicating details about the
+                  last transition.
+                type: string
+              restoredPvcName:
+                description: The name of the PersistentVolumeClaim created by this
+                  restore operation.
+                type: string
+              status:
+                description: Represents the current phase of the restore operation.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
