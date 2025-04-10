@@ -1,0 +1,9 @@
+apiVersion: backup.infracloud-citadel-vbakup.com/v1alpha1
+kind: VolumeRestore
+metadata:
+  labels:
+    app.kubernetes.io/name: kube-application-snapshot
+    app.kubernetes.io/managed-by: kustomize
+  name: volumerestore-sample
+spec:
+  # TODO(user): Add fields here
