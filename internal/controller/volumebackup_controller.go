@@ -77,12 +77,6 @@ func (r *VolumeBackupReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	// Handle deletion
-	if !vb.ObjectMeta.DeletionTimestamp.IsZero() {
-		// Handle finalizer logic here if needed
-		return ctrl.Result{}, nil
-	}
-
 	switch vb.Status.Phase {
 	case "Completed", "Failed":
 		// Optionally reprocess if spec has changed
@@ -105,7 +99,6 @@ func (r *VolumeBackupReconciler) Reconcile(ctx context.Context, req ctrl.Request
 func (r *VolumeBackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&backupv1alpha1.VolumeBackup{}).
-		Owns(&snapshotv1.VolumeSnapshot{}).
 		Named("volumebackup").
 		Complete(r)
 }

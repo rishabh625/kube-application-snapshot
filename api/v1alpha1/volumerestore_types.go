@@ -49,6 +49,8 @@ type VolumeRestoreSpec struct {
 	// If not specified, it might default based on the VolumeSnapshotClass or cluster defaults.
 	// +optional
 	TargetStorageClassName *string `json:"targetStorageClassName,omitempty"`
+
+	OverwritePVC bool `json:"overwritePVC,omitempty"` // Indicates if the PVC exists can it be overwritten with restored version
 }
 
 // VolumeRestoreStatus defines the observed state of VolumeRestore.

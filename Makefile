@@ -212,30 +212,35 @@ $(GOLANGCI_LINT): $(LOCALBIN)
 .PHONY: detect-distro
 detect-distro:
 	@echo "Detecting Kubernetes distribution..."
-	$(eval SERVER_VERSION := $(shell $(KUBECTL) version --short --output=json | grep -o '"gitVersion": *"[^"]*"' | cut -d'"' -f4))
-	$(eval DISTRO := $(shell echo $(SERVER_VERSION) | \
-		awk '{if ($$0 ~ /eks/) print "eks"; else if ($$0 ~ /gke/) print "gke"; else if ($$0 ~ /k3s/) print "k3s"; else if ($$0 ~ /minikube/) print "minikube"; else if ($$0 ~ /kind/) print "kind"; else print "unknown"}'))
-	@echo "Detected distro: $(DISTRO)"
+	$(eval PROVIDER_ID := $(shell $(KUBECTL) get nodes -o yaml | grep -m 1 'providerID:' | awk '{print $$2}'))
+	$(eval DISTRO := $(strip $(shell echo $(PROVIDER_ID) | \
+		awk '{if ($$0 ~ /aws/) print "eks"; else if ($$0 ~ /gce/) print "gke"; else if ($$0 ~ /k3s/) print "k3s"; else if ($$0 ~ /minikube/) print "minikube"; else if ($$0 ~ /kind/) print "kind"; else print "unknown"}')))
+	@echo "Detected distro: '$(DISTRO)'"
 
 # Install snapshot-controller and related CRDs
 .PHONY: install-snapshot
 install-snapshot:
-	@echo "Installing CSI Snapshot Controller components for: $(DISTRO)"
-ifeq ($(DISTRO),eks)
-	$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
-	$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
-else ifeq ($(DISTRO),gke)
-	@echo "GKE might have CSI snapshotting pre-installed. Skipping automatic install."
-else ifeq ($(DISTRO),k3s)
-	@echo "Please manually install snapshot-controller and a snapshot-compatible CSI driver (e.g., Longhorn)."
-else ifeq ($(DISTRO),minikube)
-	$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
-else ifeq ($(DISTRO),kind)
-	$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
-else
-	@echo "Unrecognized or custom Kubernetes distro. Attempting to install snapshot controller."
-	$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
-endif
+	@echo "Snapshot Controller components for: $(DISTRO)"
+	@if [ "$(DISTRO)" = "eks" ]; then \
+		$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml; \
+		$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml; \
+	elif [ "$(DISTRO)" = "gke" ]; then \
+		echo "GKE might have CSI snapshotting pre-installed. Skipping automatic install."; \
+	elif [ "$(DISTRO)" = "minikube" ]; then \
+		$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml; \
+	elif [ "$(DISTRO)" = "kind" ]; then \
+		$(KUSTOMIZE) build "github.com/kubernetes-csi/external-snapshotter/client/config/crd" | $(KUBECTL) apply -f -; \
+		$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/csi-driver-host-path/master/deploy/kubernetes-1.30/hostpath/csi-hostpath-driverinfo.yaml; \
+		$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/csi-driver-host-path/master/deploy/kubernetes-1.30/hostpath/csi-hostpath-plugin.yaml; \
+		$(KUSTOMIZE) build "github.com/kubernetes-csi/external-snapshotter/deploy/kubernetes/csi-snapshotter" | $(KUBECTL) apply -f -; \
+		$(KUSTOMIZE) build "github.com/kubernetes-csi/external-snapshotter/deploy/kubernetes/snapshot-controller" | $(KUBECTL) apply -f -; \
+		#$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml; \
+	elif [ "$(DISTRO)" = "k3s" ]; then \
+		echo -e "\033[0;31m Please manually install snapshot-controller and a snapshot-compatible CSI driver (e.g., Longhorn). \033[0m"; \
+	else \
+		echo "Unrecognized or custom Kubernetes distro. Attempting to install snapshot controller."; \
+		$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml; \
+	fi
 
 .PHONY: install detect-distro install-snapshot install-crds
 

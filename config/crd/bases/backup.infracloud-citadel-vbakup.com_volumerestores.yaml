@@ -39,6 +39,8 @@ spec:
           spec:
             description: VolumeRestoreSpec defines the desired state of VolumeRestore.
             properties:
+              overwritePVC:
+                type: boolean
               sourceSnapshotName:
                 description: |-
                   The name of the VolumeBackup object, or directly the VolumeSnapshot object,

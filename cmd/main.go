@@ -202,7 +202,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.VolumeBackupReconciler{
+	/*if err = (&controller.VolumeBackupReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
@@ -215,8 +215,25 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VolumeRestore")
 		os.Exit(1)
-	}
+	}*/
 	// +kubebuilder:scaffold:builder
+
+	if err = (&controller.VolumeBackupReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		// Add Recorder if emitting events
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "VolumeBackup")
+		os.Exit(1)
+	}
+	if err = (&controller.VolumeRestoreReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		// Add Recorder if emitting events
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "VolumeRestore")
+		os.Exit(1)
+	}
 
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")
