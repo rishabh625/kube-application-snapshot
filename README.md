@@ -1,8 +1,18 @@
 # kube-application-snapshot
-// TODO(user): Add simple overview of use/purpose
+
+Kube Application snapshot is a controller to provide backup and restore option for persitent volumes in kubernetes.
+
+The controller works using volumeSnapshot API supported in kubernetes through csidrivers.
+
+Prerequisites to install and run this controller is to install supported csi-driver based on your StorageClass provider.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+Kube Application Snapshot is a Kubernetes controller that provides automated backup and restore capabilities for Persistent Volumes in Kubernetes clusters. It leverages the [Volume Snapshot API](https://kubernetes.io/docs/concepts/storage/volume-snapshots/) to create and manage point-in-time copies of your persistent data.
+
+- Create volume snapshots on-demand or on schedule
+- Restore volumes from existing snapshots
+- Support for multiple storage providers through CSI drivers
+- Cross-namespace volume restoration
 
 ## Getting Started
 
@@ -11,6 +21,31 @@
 - docker version 17.03+.
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
+
+Before installing this controller, ensure you have:
+
+1. A Kubernetes cluster with Volume Snapshot API enabled (v1.20+)
+2. CSI driver installed that supports volume snapshots
+   - [AWS EBS CSI driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver)
+   - [GCE PD CSI driver](https://github.com/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver)
+   - [Azure Disk CSI driver](https://github.com/kubernetes-sigs/azuredisk-csi-driver)
+   - [Local Path Provisioner](https://github.com/rancher/local-path-provisioner) (for development/testing)
+
+3. Volume Snapshot CRDs and controller installed. You can install them using:
+   ```bash
+   make install-snapshot
+   ```
+Volume Snapshot CRDs is currently only defined for kind cluster and is in progress.
+
+### Test locally 
+
+You can apply the samples (examples) from the config/sample:
+
+```sh
+kubectl apply -k config/samples/
+```
+
+PVC need to be specified to backup and restore volumes.
 
 ### To Deploy on the cluster
 **Build and push your image to the location specified by `IMG`:**
