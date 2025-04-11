@@ -139,11 +139,11 @@ ifndef ignore-not-found
   ignore-not-found = false
 endif
 
-.PHONY: install
+.PHONY: install-crds
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
 
-.PHONY: uninstall
+.PHONY: uninstall-crds
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
@@ -207,6 +207,49 @@ $(ENVTEST): $(LOCALBIN)
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+
+# Detect Kubernetes Distro (sets $(DISTRO))
+.PHONY: detect-distro
+detect-distro:
+	@echo "Detecting Kubernetes distribution..."
+	$(eval PROVIDER_ID := $(shell $(KUBECTL) get nodes -o yaml | grep -m 1 'providerID:' | awk '{print $$2}'))
+	$(eval DISTRO := $(strip $(shell echo $(PROVIDER_ID) | \
+		awk '{if ($$0 ~ /aws/) print "eks"; else if ($$0 ~ /gce/) print "gke"; else if ($$0 ~ /k3s/) print "k3s"; else if ($$0 ~ /minikube/) print "minikube"; else if ($$0 ~ /kind/) print "kind"; else print "unknown"}')))
+	@echo "Detected distro: '$(DISTRO)'"
+
+# Install snapshot-controller and related CRDs
+.PHONY: install-snapshot
+install-snapshot:
+	@echo "Snapshot Controller components for: $(DISTRO)"
+	@if [ "$(DISTRO)" = "eks" ]; then \
+		$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml; \
+		$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml; \
+	elif [ "$(DISTRO)" = "gke" ]; then \
+		echo "GKE might have CSI snapshotting pre-installed. Skipping automatic install."; \
+	elif [ "$(DISTRO)" = "minikube" ]; then \
+		$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml; \
+	elif [ "$(DISTRO)" = "kind" ]; then \
+		$(KUSTOMIZE) build "github.com/kubernetes-csi/external-snapshotter/client/config/crd" | $(KUBECTL) apply -f -; \
+		$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/csi-driver-host-path/master/deploy/kubernetes-1.30/hostpath/csi-hostpath-driverinfo.yaml; \
+		$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/csi-driver-host-path/master/deploy/kubernetes-1.30/hostpath/csi-hostpath-plugin.yaml; \
+		$(KUSTOMIZE) build "github.com/kubernetes-csi/external-snapshotter/deploy/kubernetes/csi-snapshotter" | $(KUBECTL) apply -f -; \
+		$(KUSTOMIZE) build "github.com/kubernetes-csi/external-snapshotter/deploy/kubernetes/snapshot-controller" | $(KUBECTL) apply -f -; \
+		#$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml; \
+	elif [ "$(DISTRO)" = "k3s" ]; then \
+		echo -e "\033[0;31m Please manually install snapshot-controller and a snapshot-compatible CSI driver (e.g., Longhorn). \033[0m"; \
+	else \
+		echo "Unrecognized or custom Kubernetes distro. Attempting to install snapshot controller."; \
+		$(KUBECTL) apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml; \
+	fi
+
+.PHONY: install detect-distro install-snapshot install-crds
+
+# Required tools
+KUBECTL ?= kubectl
+KUSTOMIZE ?= kustomize
+
+# Install everything
+install: detect-distro install-snapshot install-crds
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary

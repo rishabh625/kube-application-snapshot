@@ -28,14 +28,51 @@ type VolumeRestoreSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of VolumeRestore. Edit volumerestore_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// The name of the VolumeBackup object, or directly the VolumeSnapshot object,
+	// to restore from. Using VolumeSnapshot name is more direct.
+	// +kubebuilder:validation:Required
+	SourceSnapshotName string `json:"sourceSnapshotName"` // Assumes snapshot exists in the same namespace as the Restore request
+
+	// The namespace where the source VolumeSnapshot resides.
+	// +kubebuilder:validation:Required
+	SourceSnapshotNamespace string `json:"sourceSnapshotNamespace"`
+
+	// The name of the target PersistentVolumeClaim to be created from the snapshot.
+	// +kubebuilder:validation:Required
+	TargetPvcName string `json:"targetPvcName"`
+
+	// The namespace where the target PVC should be created. Defaults to the VolumeRestore's namespace.
+	// +optional
+	TargetPvcNamespace string `json:"targetPvcNamespace,omitempty"`
+
+	// Optional: Specify the StorageClassName for the restored PVC.
+	// If not specified, it might default based on the VolumeSnapshotClass or cluster defaults.
+	// +optional
+	TargetStorageClassName *string `json:"targetStorageClassName,omitempty"`
+
+	OverwritePVC bool `json:"overwritePVC,omitempty"` // Indicates if the PVC exists can it be overwritten with restored version
 }
 
 // VolumeRestoreStatus defines the observed state of VolumeRestore.
 type VolumeRestoreStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// Represents the current phase of the restore operation.
+	// +optional
+	Phase string `json:"phase,omitempty"` // e.g., Pending, CreatingPVC, Completed, Failed
+
+	// A human-readable message indicating details about the last transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// The name of the PersistentVolumeClaim created by this restore operation.
+	// +optional
+	RestoredPvcName string `json:"restoredPvcName,omitempty"`
+
+	// The time the restore operation was completed.
+	// +optional
+	CompletionTime *metav1.Time `json:"completionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
