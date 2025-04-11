@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	"strings"
 
 	"k8s.io/client-go/discovery"
@@ -11,11 +10,11 @@ import (
 func DetectDistro() string {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(ctrl.GetConfigOrDie())
 	if err != nil {
-		return "unknown"
+		return UNKNOWN
 	}
 	version, err := discoveryClient.ServerVersion()
 	if err != nil {
-		return "unknown"
+		return UNKNOWN
 	}
 	v := version.GitVersion
 	switch {
@@ -34,40 +33,42 @@ func DetectDistro() string {
 	case strings.Contains(v, "+e"): // OpenShift
 		return "OpenShift"
 	default:
-		return "unknown"
+		return UNKNOWN
 	}
 }
 
 func SnapshotHelpMessage(distro string) string {
-	switch distro {
-	case "EKS":
-		return `EKS detected. Install snapshot controller:
-  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
-  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
-Create a VolumeSnapshotClass using AWS EBS CSI driver.`
+	// TODO - In progress
+	/*switch distro {
+		case "EKS":
+			return `EKS detected. Install snapshot controller:
+	  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
+	  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
+	Create a VolumeSnapshotClass using AWS EBS CSI driver.`
 
-	case "GKE":
-		return `GKE detected. Install snapshot controller if not already present (non-Autopilot).
-Use pd.csi.storage.gke.io as your VolumeSnapshotClass driver.`
+		case "GKE":
+			return `GKE detected. Install snapshot controller if not already present (non-Autopilot).
+	Use pd.csi.storage.gke.io as your VolumeSnapshotClass driver.`
 
-	case "k3s":
-		return `k3s detected. Manually install snapshot-controller and a CSI driver with snapshot support.
-See: https://github.com/kubernetes-csi/external-snapshotter`
+		case "k3s":
+			return `k3s detected. Manually install snapshot-controller and a CSI driver with snapshot support.
+	See: https://github.com/kubernetes-csi/external-snapshotter`
 
-	case "RKE2":
-		return `RKE2 detected. Snapshot support is not always pre-installed. Install the snapshot-controller and create a compatible VolumeSnapshotClass.`
+		case "RKE2":
+			return `RKE2 detected. Snapshot support is not always pre-installed. Install the snapshot-controller and create a compatible VolumeSnapshotClass.`
 
-	case "minikube", "kind":
-		return fmt.Sprintf(`%s detected. Install snapshot-controller and use compatible CSI plugin (e.g., hostpath).
-Try:
-  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml`, distro)
+		case "minikube", "kind":
+			return fmt.Sprintf(`%s detected. Install snapshot-controller and use compatible CSI plugin (e.g., hostpath).
+	Try:
+	  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml`, distro)
 
-	case "OpenShift":
-		return `OpenShift detected. Install snapshot support via OperatorHub or use built-in snapshot-enabled CSI drivers.`
+		case "OpenShift":
+			return `OpenShift detected. Install snapshot support via OperatorHub or use built-in snapshot-enabled CSI drivers.`
 
-	default:
-		return `Unknown Kubernetes distro. Install snapshot controller:
-  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
-Create a VolumeSnapshotClass for your CSI driver.`
-	}
+		default:
+			return `Unknown Kubernetes distro. Install snapshot controller:
+	  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
+	Create a VolumeSnapshotClass for your CSI driver.`
+		}*/
+	return ""
 }

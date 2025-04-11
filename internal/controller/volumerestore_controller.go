@@ -35,6 +35,7 @@ import (
 
 	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v6/apis/volumesnapshot/v1"
 	backupv1alpha1 "github.com/rishabh625/kube-application-snapshot/api/v1alpha1"
+	"github.com/rishabh625/kube-application-snapshot/util"
 )
 
 // VolumeRestoreReconciler reconciles a VolumeRestore object
@@ -70,7 +71,7 @@ func (r *VolumeRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	switch vr.Status.Phase {
-	case "Completed", "Failed":
+	case util.COMPLETED, util.FAILED:
 		// Optionally, you might check if spec changed; for now, no reconciliation is performed.
 		log.Info("VolumeRestore is already completed or failed", "phase", vr.Status.Phase)
 		return ctrl.Result{}, nil
@@ -106,7 +107,7 @@ func (r *VolumeRestoreReconciler) handlePending(ctx context.Context, vr *backupv
 	}
 	if err := r.Get(ctx, snapshotKey, &snapshot); err != nil {
 		if errors.IsNotFound(err) {
-			vr.Status.Phase = "Failed"
+			vr.Status.Phase = util.FAILED
 			vr.Status.Message = fmt.Sprintf("Source VolumeSnapshot %s not found in namespace %s", vr.Spec.SourceSnapshotName, vr.Spec.SourceSnapshotNamespace)
 			_ = r.Status().Update(ctx, vr)
 			return ctrl.Result{}, nil
@@ -136,7 +137,7 @@ func (r *VolumeRestoreReconciler) handlePending(ctx context.Context, vr *backupv
 		if vr.Spec.OverwritePVC {
 			// Delete existing PVC
 			if err := r.Delete(ctx, &pvc); err != nil {
-				vr.Status.Phase = "Failed"
+				vr.Status.Phase = util.FAILED
 				vr.Status.Message = fmt.Sprintf("Failed to delete existing PVC: %v", err)
 				_ = r.Status().Update(ctx, vr)
 				return ctrl.Result{}, err
@@ -144,7 +145,7 @@ func (r *VolumeRestoreReconciler) handlePending(ctx context.Context, vr *backupv
 			// Requeue to continue after PVC is deleted
 			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		} else {
-			vr.Status.Phase = "Failed"
+			vr.Status.Phase = util.FAILED
 			vr.Status.Message = fmt.Sprintf("Target PVC %s already exists in namespace %s", vr.Spec.TargetPvcName, targetNamespace)
 			_ = r.Status().Update(ctx, vr)
 			return ctrl.Result{}, nil
@@ -155,20 +156,20 @@ func (r *VolumeRestoreReconciler) handlePending(ctx context.Context, vr *backupv
 	// 4. Fetch the VolumeSnapshotContent to get the snapshot size
 	var vsc snapshotv1.VolumeSnapshotContent
 	if snapshot.Status.BoundVolumeSnapshotContentName == nil {
-		vr.Status.Phase = "Failed"
+		vr.Status.Phase = util.FAILED
 		vr.Status.Message = "VolumeSnapshot does not have a bound VolumeSnapshotContent"
 		_ = r.Status().Update(ctx, vr)
 		return ctrl.Result{}, nil
 	}
 	vscKey := types.NamespacedName{Name: *snapshot.Status.BoundVolumeSnapshotContentName}
 	if err := r.Get(ctx, vscKey, &vsc); err != nil {
-		vr.Status.Phase = "Failed"
+		vr.Status.Phase = util.FAILED
 		vr.Status.Message = "Unable to fetch VolumeSnapshotContent"
 		_ = r.Status().Update(ctx, vr)
 		return ctrl.Result{}, err
 	}
 	if vsc.Status == nil || vsc.Status.RestoreSize == nil {
-		vr.Status.Phase = "Failed"
+		vr.Status.Phase = util.FAILED
 		vr.Status.Message = "VolumeSnapshotContent is missing restore size information"
 		_ = r.Status().Update(ctx, vr)
 		return ctrl.Result{}, nil
@@ -211,7 +212,7 @@ func (r *VolumeRestoreReconciler) handlePending(ctx context.Context, vr *backupv
 
 	// 6. Create the PVC
 	if err := r.Create(ctx, newPVC); err != nil {
-		vr.Status.Phase = "Failed"
+		vr.Status.Phase = util.FAILED
 		vr.Status.Message = fmt.Sprintf("Failed to create PVC: %v", err)
 		_ = r.Status().Update(ctx, vr)
 		return ctrl.Result{}, err
@@ -241,7 +242,7 @@ func (r *VolumeRestoreReconciler) handleCreatingPVC(ctx context.Context, vr *bac
 	pvcKey := types.NamespacedName{Name: vr.Status.RestoredPvcName, Namespace: targetNamespace}
 	if err := r.Get(ctx, pvcKey, &pvc); err != nil {
 		if errors.IsNotFound(err) {
-			vr.Status.Phase = "Failed"
+			vr.Status.Phase = util.FAILED
 			vr.Status.Message = "Restored PVC not found"
 			_ = r.Status().Update(ctx, vr)
 			return ctrl.Result{}, nil
@@ -253,7 +254,7 @@ func (r *VolumeRestoreReconciler) handleCreatingPVC(ctx context.Context, vr *bac
 	switch pvc.Status.Phase {
 	case corev1.ClaimBound:
 		now := metav1.Now()
-		vr.Status.Phase = "Completed"
+		vr.Status.Phase = util.COMPLETED
 		vr.Status.Message = "PVC successfully bound"
 		vr.Status.CompletionTime = &now
 		if err := r.Status().Update(ctx, vr); err != nil {
@@ -266,7 +267,7 @@ func (r *VolumeRestoreReconciler) handleCreatingPVC(ctx context.Context, vr *bac
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 
 	default:
-		vr.Status.Phase = "Failed"
+		vr.Status.Phase = util.FAILED
 		vr.Status.Message = fmt.Sprintf("PVC entered unexpected phase: %s", pvc.Status.Phase)
 		_ = r.Status().Update(ctx, vr)
 		return ctrl.Result{}, nil

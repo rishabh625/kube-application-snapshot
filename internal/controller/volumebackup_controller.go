@@ -78,7 +78,7 @@ func (r *VolumeBackupReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	switch vb.Status.Phase {
-	case "Completed", "Failed":
+	case util.COMPLETED, util.FAILED:
 		// Optionally reprocess if spec has changed
 		log.Info("VolumeBackup is already completed or failed", "Phase", vb.Status.Phase)
 		return ctrl.Result{}, nil
@@ -105,14 +105,17 @@ func (r *VolumeBackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *VolumeBackupReconciler) handlePending(ctx context.Context, vb *backupv1alpha1.VolumeBackup) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
-	if !r.resourceExists(ctx, "volumesnapshotclasses.snapshot.storage.k8s.io") {
+	if !r.resourceExists("volumesnapshotclasses.snapshot.storage.k8s.io") {
 		distro := util.DetectDistro()
 		log.Info("VolumeSnapshotClass CRD not found. You likely need to install snapshot support.")
 		log.Info(util.SnapshotHelpMessage(distro))
 
-		vb.Status.Phase = "Failed"
+		vb.Status.Phase = util.FAILED
 		vb.Status.Message = "Missing VolumeSnapshotClass CRD. Install snapshot-controller and class." + util.SnapshotHelpMessage(distro)
-		r.updateStatusToFailed(ctx, vb, "Missing VolumeSnapshotClass CRD. Install snapshot-controller and class.")
+		_, err := r.updateStatusToFailed(ctx, vb, "Missing VolumeSnapshotClass CRD. Install snapshot-controller and class.")
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, customerror.New("VolumeSnapshotClass CRD not found")
 
 	}
@@ -170,7 +173,7 @@ func (r *VolumeBackupReconciler) handlePending(ctx context.Context, vb *backupv1
 }
 
 func (r *VolumeBackupReconciler) updateStatusToFailed(ctx context.Context, vb *backupv1alpha1.VolumeBackup, message string) (ctrl.Result, error) {
-	vb.Status.Phase = "Failed"
+	vb.Status.Phase = util.FAILED
 	vb.Status.Message = message
 	err := r.Status().Update(ctx, vb)
 	return ctrl.Result{}, err
@@ -194,7 +197,7 @@ func (r *VolumeBackupReconciler) handleCreatingSnapshot(ctx context.Context, vb 
 
 	if *vs.Status.ReadyToUse {
 		now := metav1.Now()
-		vb.Status.Phase = "Completed"
+		vb.Status.Phase = util.COMPLETED
 		vb.Status.ReadyToUse = true
 		vb.Status.CompletionTime = &now
 		vb.Status.Message = "Snapshot is ready to use"
@@ -209,7 +212,7 @@ func (r *VolumeBackupReconciler) handleCreatingSnapshot(ctx context.Context, vb 
 	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 }
 
-func (r *VolumeBackupReconciler) resourceExists(ctx context.Context, gvr string) bool {
+func (r *VolumeBackupReconciler) resourceExists(gvr string) bool {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(ctrl.GetConfigOrDie())
 	if err != nil {
 		return false

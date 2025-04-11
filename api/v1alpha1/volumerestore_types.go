@@ -30,15 +30,15 @@ type VolumeRestoreSpec struct {
 
 	// The name of the VolumeBackup object, or directly the VolumeSnapshot object,
 	// to restore from. Using VolumeSnapshot name is more direct.
-	//+kubebuilder:validation:Required
+	// +kubebuilder:validation:Required
 	SourceSnapshotName string `json:"sourceSnapshotName"` // Assumes snapshot exists in the same namespace as the Restore request
 
 	// The namespace where the source VolumeSnapshot resides.
-	//+kubebuilder:validation:Required
+	// +kubebuilder:validation:Required
 	SourceSnapshotNamespace string `json:"sourceSnapshotNamespace"`
 
 	// The name of the target PersistentVolumeClaim to be created from the snapshot.
-	//+kubebuilder:validation:Required
+	// +kubebuilder:validation:Required
 	TargetPvcName string `json:"targetPvcName"`
 
 	// The namespace where the target PVC should be created. Defaults to the VolumeRestore's namespace.
