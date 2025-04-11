@@ -76,12 +76,12 @@ spec:
                 description: A human-readable message indicating details about the
                   last transition.
                 type: string
+              phase:
+                description: Represents the current phase of the restore operation.
+                type: string
               restoredPvcName:
                 description: The name of the PersistentVolumeClaim created by this
                   restore operation.
-                type: string
-              status:
-                description: Represents the current phase of the restore operation.
                 type: string
             type: object
         type: object

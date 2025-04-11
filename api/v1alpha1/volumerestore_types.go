@@ -58,7 +58,7 @@ type VolumeRestoreStatus struct {
 
 	// Represents the current phase of the restore operation.
 	// +optional
-	Status string `json:"status,omitempty"` // e.g., Pending, CreatingPVC, Completed, Failed
+	Phase string `json:"phase,omitempty"` // e.g., Pending, CreatingPVC, Completed, Failed
 
 	// A human-readable message indicating details about the last transition.
 	// +optional

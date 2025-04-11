@@ -52,7 +52,7 @@ type VolumeBackupStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 	// Represents the current phase of the backup operation.
 	// +optional
-	Status string `json:"status,omitempty"` // e.g., Pending, CreatingSnapshot, Completed, Failed
+	Phase string `json:"phase,omitempty"` // e.g., Pending, CreatingSnapshot, Completed, Failed
 
 	// A human-readable message indicating details about the last transition.
 	// +optional
@@ -65,6 +65,8 @@ type VolumeBackupStatus struct {
 	// The time the backup operation was completed.
 	// +optional
 	CompletionTime *metav1.Time `json:"completionTime,omitempty"`
+
+	ReadyToUse bool `json:"readyToUse,omitempty"` // Indicates if the backup is ready to be used
 }
 
 // +kubebuilder:object:root=true

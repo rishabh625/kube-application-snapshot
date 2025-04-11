@@ -66,15 +66,15 @@ spec:
                 description: A human-readable message indicating details about the
                   last transition.
                 type: string
-              snapshotHandle:
-                description: The name of the VolumeSnapshot object created by this
-                  backup.
-                type: string
-              status:
+              phase:
                 description: |-
                   INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
                   Important: Run "make" to regenerate code after modifying this file
                   Represents the current phase of the backup operation.
+                type: string
+              snapshotHandle:
+                description: The name of the VolumeSnapshot object created by this
+                  backup.
                 type: string
             type: object
         type: object
